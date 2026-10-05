@@ -65,6 +65,7 @@
 
     <footer class="page-foot">
       <span>共 {{ total }} 条发电计划记录</span>
+      <span>可用机组台数与机组运行台账同源（口径：运行中＋停机备用）</span>
       <span v-if="errorMessage" class="error-text">{{ errorMessage }}</span>
     </footer>
   </section>
@@ -76,6 +77,7 @@ import { computed, onMounted, ref } from 'vue'
 import {
   downloadEntries,
   listEntries,
+  loadUnitBoard,
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
@@ -85,13 +87,19 @@ const meta = moduleMeta('generation')
 const columns = ["计划编号", "计划日期", "计划出力", "实际出力", "日发电量", "上网电量", "完成比率", "计划状态"]
 const actions = ["提交编制", "下达计划", "确认完成"]
 const statuses = ["待编制", "已下达", "执行中", "已完成"]
-const stats = [{"label": "计划发电量", "value": 0}, {"label": "实际发电量", "value": 0}, {"label": "计划完成率", "value": 0}]
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
 const filterFields = columns.slice(0, 3)
+// 可用机组台数与机组运行页、运营概览同源，都从机组台账实时点数。
+const stats = ref([
+  { label: '计划发电量', value: 0 },
+  { label: '实际发电量', value: 0 },
+  { label: '计划完成率', value: 0 },
+  { label: '可用机组台数', value: 0 },
+])
 const statusSummary = computed(() =>
   statuses.map((status: string) => ({
     status,
@@ -128,6 +136,8 @@ function reload() {
     const payload = listEntries(meta.key, filters.value)
     rows.value = payload.items
     total.value = payload.total
+    const available = loadUnitBoard().summary.available
+    stats.value = [...stats.value.slice(0, 3), { label: '可用机组台数', value: available }]
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '发电计划列表读取失败'
   }

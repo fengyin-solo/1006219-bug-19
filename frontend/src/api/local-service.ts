@@ -1,9 +1,27 @@
 import { MODULE_BY_KEY } from '@/data/modules'
 import { allRows, listRows, resetRows, saveRows } from '@/data/local-store'
-import type { ActionResult, EntryRow, ModuleMeta, OverviewResult, PageResult } from '@/data/types'
+import { resetUnitEvents } from '@/data/unit-events'
+import {
+  UNIT_MODULE_KEY,
+  applyUnitAction,
+  listDutyRoster,
+  loadUnitBoard,
+  syncUnitHours,
+} from '@/api/unit-ledger'
+import type {
+  ActionContext,
+  ActionResult,
+  EntryRow,
+  ModuleMeta,
+  OverviewResult,
+  PageResult,
+} from '@/data/types'
 
 // 会写进数据的「往回走」动作：命中就把这条记录标成异常态，看板上能一眼看出来。
 const NEGATIVE_ACTIONS = ['撤销', '作废', '拒绝', '驳回', '停用', '忽略', '下线', '回滚']
+
+// 机组模块的读写统一转给 unit-ledger：状态流转、小时回填、台数汇总都在那里。
+export { listDutyRoster, loadUnitBoard }
 
 export function moduleMeta(key: string): ModuleMeta {
   const meta = MODULE_BY_KEY.get(key)
@@ -24,11 +42,19 @@ export function filterRows(rows: EntryRow[], filters: Record<string, string>): E
 }
 
 export function listEntries(key: string, filters: Record<string, string> = {}): PageResult {
+  // 机组列表读取前先按并网事件台账回填小时数，列表、导出与看板保持同一份数。
+  if (key === UNIT_MODULE_KEY) {
+    syncUnitHours()
+  }
   const matched = filterRows(listRows(key), filters)
   return { items: matched, total: matched.length, page: 1, size: matched.length }
 }
 
-export function runAction(key: string, id: number, action: string): ActionResult {
+export function runAction(key: string, id: number, action: string, context?: ActionContext): ActionResult {
+  if (key === UNIT_MODULE_KEY) {
+    // 机组动作必须带值班上下文（班组、提交人），缺省时按当前默认值班账号入账。
+    return applyUnitAction(id, action, context ?? { operator: '值班管理员', crew: '运行一值' })
+  }
   const meta = moduleMeta(key)
   const target = meta.actionTargets[action]
   if (!target) {
@@ -58,10 +84,19 @@ export function runAction(key: string, id: number, action: string): ActionResult
 
 export function resetModule(key: string): PageResult {
   resetRows(key)
+  if (key === UNIT_MODULE_KEY) {
+    // 机组台账与并网事件台账一起重置，再按种子事件回填小时数。
+    resetUnitEvents()
+    syncUnitHours()
+  }
   return listEntries(key)
 }
 
 export function exportEntries(key: string): { filename: string; content: string } {
+  // 另存的机组清单跟着台账改：导出前先回填小时数，拿到的是最新推算值。
+  if (key === UNIT_MODULE_KEY) {
+    syncUnitHours()
+  }
   const meta = moduleMeta(key)
   const header = ['编号', ...meta.fields, '当前状态']
   const lines = [header.join(',')]
@@ -95,11 +130,13 @@ export function loadOverview(): OverviewResult {
       abnormal: entries.filter((row) => row.abnormal).length,
     }
   })
+  // 机组运行明细：台数与列表同源点数，缺项说明一并呈现。
+  const unitBoard = loadUnitBoard()
   const cards = [
     { label: '业务模块', value: modules.length },
     { label: '登记总量', value: modules.reduce((sum, item) => sum + item.created, 0) },
     { label: '待处理', value: modules.reduce((sum, item) => sum + item.pending, 0) },
     { label: '异常量', value: modules.reduce((sum, item) => sum + item.abnormal, 0) },
   ]
-  return { cards, modules }
+  return { cards, modules, unitBoard }
 }

@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Dashboard from '@/views/Dashboard.vue'
 const Station = () => import('@/views/station/index.vue')
 const Unit = () => import('@/views/unit/index.vue')
+const Duty = () => import('@/views/duty/index.vue')
 const Governor = () => import('@/views/governor/index.vue')
 const Excitation = () => import('@/views/excitation/index.vue')
 const Transformer = () => import('@/views/transformer/index.vue')
@@ -27,6 +28,7 @@ const router = createRouter({
     { path: '/', name: 'dashboard', component: Dashboard },
     { path: '/station', name: 'station', component: Station },
     { path: '/unit', name: 'unit', component: Unit },
+    { path: '/duty', name: 'duty', component: Duty },
     { path: '/governor', name: 'governor', component: Governor },
     { path: '/excitation', name: 'excitation', component: Excitation },
     { path: '/transformer', name: 'transformer', component: Transformer },

@@ -65,6 +65,7 @@
 
     <footer class="page-foot">
       <span>共 {{ total }} 条机组运行记录</span>
+      <span>当前值班班组：{{ store.crew }}，操作计入本班组值班清单</span>
       <span v-if="errorMessage" class="error-text">{{ errorMessage }}</span>
     </footer>
   </section>
@@ -76,26 +77,36 @@ import { computed, onMounted, ref } from 'vue'
 import {
   downloadEntries,
   listEntries,
+  loadUnitBoard,
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
 import type { EntryRow } from '@/data/types'
+import { useSessionStore } from '@/stores/session'
 
 const meta = moduleMeta('unit')
+const store = useSessionStore()
 const columns = ["机组编号", "机组型号", "额定转速", "有功出力", "无功出力", "累计运行小时", "振动数值", "运行状态"]
 const actions = ["开机并网", "停机转备", "登记故障"]
 const statuses = ["待启动", "运行中", "停机备用", "故障停机"]
-const stats = [{"label": "运行中机组", "value": 0}, {"label": "备用机组", "value": 0}, {"label": "故障机组", "value": 0}]
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
 const filterFields = columns.slice(0, 3)
+
+// 看板台数与列表状态同源：都从机组台账实时点数，两边必然对得上。
+const board = ref(loadUnitBoard())
+const stats = computed(() => [
+  { label: '运行中机组', value: board.value.summary.running },
+  { label: '备用机组', value: board.value.summary.standby },
+  { label: '故障机组', value: board.value.summary.fault },
+])
 const statusSummary = computed(() =>
   statuses.map((status: string) => ({
     status,
-    count: rows.value.filter((row) => String(row.status) === status).length,
+    count: board.value.rows.filter((row) => row.status === status).length,
   })),
 )
 
@@ -114,7 +125,10 @@ function openCreate() {
 
 function runAction(action: string, row: EntryRow) {
   errorMessage.value = ''
-  const result = applyAction(meta.key, Number(row.id), action)
+  const result = applyAction(meta.key, Number(row.id), action, {
+    operator: store.operator,
+    crew: store.crew,
+  })
   if (!result.ok) {
     errorMessage.value = result.message
     return
@@ -128,6 +142,7 @@ function reload() {
     const payload = listEntries(meta.key, filters.value)
     rows.value = payload.items
     total.value = payload.total
+    board.value = loadUnitBoard()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '机组运行列表读取失败'
   }
