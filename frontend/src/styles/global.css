@@ -35,3 +35,11 @@ body { margin: 0; background: #f6f8fb; color: #1f2937; }
 .error-text { color: #b42318; }
 .status-legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 10px; font-size: 12px; color: var(--muted); }
 .legend-item { background: #eef2f7; border-radius: 999px; padding: 2px 10px; }
+.legend-item.note { background: #e7f0ff; color: #1d4ed8; }
+.ledger-block { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin: 14px 0; }
+.ledger-block h3 { margin: 0 0 8px; font-size: 15px; }
+.rules-block ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #334155; }
+.section-title { font-size: 15px; margin: 18px 0 8px; }
+.draft-row, .draft-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 10px; }
+.ok-text { color: #067647; }
+.crew-select { border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px; font-size: 13px; }

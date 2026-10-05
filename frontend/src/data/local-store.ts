@@ -2,7 +2,8 @@ import { SEED_ROWS } from './seed'
 import type { EntryRow } from './types'
 
 // 本地持久化：数据放在 localStorage 里，刷新、关掉再打开都还在。
-const STORAGE_KEY = 'hydropower-plant-om:entries'
+// v2：机组/人员种子由占位数据改为真实台账结构，升键避免旧缓存压过新种子。
+const STORAGE_KEY = 'hydropower-plant-om:entries:v2'
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T

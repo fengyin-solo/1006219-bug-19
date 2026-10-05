@@ -18,6 +18,49 @@
       </article>
     </div>
 
+    <section class="ledger-block">
+      <h3>机组运行台账同步（与机组运行页、运营概览同一数据源）</h3>
+      <p class="page-desc">
+        发电计划可用台数以机组运行台账为准：登记故障后立即回落，重新并网后恢复；两页数字一致，无第二处口径。
+      </p>
+      <div class="stat-row">
+        <article class="stat-card">
+          <span class="stat-label">可用机组(运行+备用)</span>
+          <strong class="stat-value">{{ board.stats.available }}</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">运行中</span>
+          <strong class="stat-value">{{ board.stats.running }}</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">停机备用</span>
+          <strong class="stat-value">{{ board.stats.standby }}</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">故障停机</span>
+          <strong class="stat-value">{{ board.stats.fault }}</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">备用容量(MW)</span>
+          <strong class="stat-value">{{ board.stats.standbyCapacity }}</strong>
+        </article>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr><th>机组编号</th><th>机组型号</th><th>运行状态</th><th>额定出力(MW)</th><th>累计运行小时(h)</th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="unit in board.items" :key="unit.id">
+            <td>{{ unit.code }}</td>
+            <td>{{ unit.model }}</td>
+            <td>{{ unit.status }}</td>
+            <td>{{ unit.capacity }}</td>
+            <td>{{ unit.hours }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
     <p class="status-legend">
       <span v-for="item in statusSummary" :key="item.status" class="legend-item">
         {{ item.status }}：{{ item.count }}
@@ -75,11 +118,12 @@ import { computed, onMounted, ref } from 'vue'
 
 import {
   downloadEntries,
+  getUnitBoard,
   listEntries,
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
-import type { EntryRow } from '@/data/types'
+import type { EntryRow, UnitBoard } from '@/data/types'
 
 const meta = moduleMeta('generation')
 const columns = ["计划编号", "计划日期", "计划出力", "实际出力", "日发电量", "上网电量", "完成比率", "计划状态"]
@@ -88,6 +132,10 @@ const statuses = ["待编制", "已下达", "执行中", "已完成"]
 const stats = [{"label": "计划发电量", "value": 0}, {"label": "实际发电量", "value": 0}, {"label": "计划完成率", "value": 0}]
 
 const rows = ref<EntryRow[]>([])
+const board = ref<UnitBoard>({
+  stats: { total: 0, running: 0, standby: 0, standbyCapacity: 0, fault: 0, pendingStart: 0, available: 0 },
+  items: [],
+})
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
@@ -128,6 +176,7 @@ function reload() {
     const payload = listEntries(meta.key, filters.value)
     rows.value = payload.items
     total.value = payload.total
+    board.value = getUnitBoard()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '发电计划列表读取失败'
   }

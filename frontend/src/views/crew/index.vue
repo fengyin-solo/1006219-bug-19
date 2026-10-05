@@ -19,6 +19,13 @@
     </div>
 
     <p class="status-legend">
+      <span class="legend-item note">
+        当前仅显示{{ store.crew }}的人员（共 {{ total }} 人，在场 {{ onDutyCount }} 人）；
+        值班清单与机组并网台账联动：办理离场即失去台账提交资格，越权替别的班组操作一律拒绝。
+      </span>
+    </p>
+
+    <p class="status-legend">
       <span v-for="item in statusSummary" :key="item.status" class="legend-item">
         {{ item.status }}：{{ item.count }}
       </span>
@@ -79,19 +86,26 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import { useSessionStore } from '@/stores/session'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('crew')
+const store = useSessionStore()
 const columns = ["人员编号", "姓名", "岗位", "持证类型", "证书有效期", "所属班组", "联系电话", "在场状态"]
 const actions = ["办理进场", "办理离场", "登记停工"]
 const statuses = ["待进场", "在场", "已离场", "已停工"]
-const stats = [{"label": "在场人员", "value": 0}, {"label": "持证人员", "value": 0}, {"label": "证书即将到期", "value": 0}]
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
 const filterFields = columns.slice(0, 3)
+const onDutyCount = computed(() => rows.value.filter((row) => String(row.status) === '在场').length)
+const stats = computed(() => [
+  { label: '在场人员', value: onDutyCount.value },
+  { label: '持证人员', value: rows.value.filter((row) => String(row['持证类型']) !== '').length },
+  { label: '本班总人数', value: rows.value.length },
+])
 const statusSummary = computed(() =>
   statuses.map((status: string) => ({
     status,

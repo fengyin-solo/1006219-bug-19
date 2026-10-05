@@ -8,7 +8,11 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "vue-tsc --noEmit"
+    "typecheck": "vue-tsc --noEmit",
+    "test:domain": "tsc --module commonjs --target ES2020 --outDir /tmp/unit-test src/data/unit-ledger.ts src/data/seed.ts src/data/seed-ledger.ts src/data/types.ts && node scripts/verify-unit-ledger.cjs",
+    "test:service": "node scripts/svc-smoke.mjs",
+    "test:ssr": "node scripts/ssr-smoke.mjs",
+    "test": "npm run test:domain && npm run test:service && npm run test:ssr"
   },
   "dependencies": {
     "pinia": "^2.1.7",
